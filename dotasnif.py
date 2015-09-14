@@ -33,6 +33,7 @@ class DotaSniffer:
             raise Exception("doApiRequest needs an method")
         
         url = 'https://api.steampowered.com/'
+        url += method
         url += ('&' if '?' in url else '?') + 'key={0}'.format(self.__apikey)
         if query:
             for key in query:
@@ -43,7 +44,7 @@ class DotaSniffer:
                 print('Got a non-json response. Possible timeout or invalid request.')
                 continue
             data = json.loads(r.text)
-            if 'status' in data:
+            if 'status' in data: #not site. Check this
                 aux = data['status']
                 if aux['status_code'] == 503:
                     print('Server busy, sleeping for one second.')
@@ -62,7 +63,7 @@ class DotaSniffer:
         method = 'IEconDOTA2_570/GetHeroes/v0001/'
         data = self.doApiRequest(method)
         heroes = {}
-        for row in data['keys']:
+        for row in data['keys']: #check
             heroes[row] = data['keys'][row]
         return heroes
 
@@ -74,7 +75,7 @@ class DotaSniffer:
         data = self.doApiRequest(url)['data']
         items = {}
         for item_key in data:
-            item = data[item_key]    
+            item = data[item_key]    #check
             items[item['id']] = item['name']
         return items
 
@@ -85,7 +86,7 @@ class DotaSniffer:
             raise Exception("getMatchList needs a valid Region and SummonerID")
         url = 'IDOTA2Match_570/GetMatchHistory/V001/'
         data = self.doApiRequest(url, query)['matches']
-        matches = []
+        matches = [] #check
         for match in data:
             matches.append(match['matchId'])
         return matches
