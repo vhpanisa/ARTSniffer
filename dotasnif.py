@@ -3,6 +3,7 @@ import json
 from time import sleep
 #C0D257B448BD6FC0D5B4E2D46E02C94
 #7"ISteamUser/GetPlayerSummaries/v0002/"
+# ####
 
 '''
 DOTA_MATCH_TYPES = {
@@ -22,7 +23,7 @@ DOTA_MATCH_TYPES = {
 class DotaSniffer:
     """Creates a Sniffer to pull data from Valve's API for DOTA2."""
     def __init__(self, apikey=None):
-        if not keypath:
+        if not apikey:
             raise Exception("No API key was parsed")
         self.__apikey = apikey
 
@@ -63,8 +64,8 @@ class DotaSniffer:
         method = 'IEconDOTA2_570/GetHeroes/v0001/'
         data = self.doApiRequest(method)
         heroes = {}
-        for row in data['keys']: #check
-            heroes[row] = data['keys'][row]
+        for hero in data['result']['heroes']:
+            heroes[hero['id']] = hero['name']
         return heroes
 
     def getItems(self):
@@ -72,29 +73,26 @@ class DotaSniffer:
         Returns a dict using the format dict[ItemID] -> ItemName.
         """
         url = 'IEconDOTA2_570/GetGameItems/v0001/'
-        data = self.doApiRequest(url)['data']
+        data = self.doApiRequest(url)['result']['items']
         items = {}
-        for item_key in data:
-            item = data[item_key]    #check
+        for item in data:
             items[item['id']] = item['name']
         return items
 
 
-    def getMatchHistory(self, query=None)
+    def getMatchHistory(self, query=None):
         """Returns an list of the last 100 MatchIDs played"""
-        if not region or pid:
-            raise Exception("getMatchList needs a valid Region and SummonerID")
         url = 'IDOTA2Match_570/GetMatchHistory/V001/'
-        data = self.doApiRequest(url, query)['matches']
-        matches = [] #check
+        data = self.doApiRequest(url, query)['result']['matches']
+        matches = []
         for match in data:
-            matches.append(match['matchId'])
+            matches.append(match['match_id'])
         return matches
 
-    def getMatch(self, matchid=None)
+    def getMatch(self, matchid=None):
         """Returns full mathch info, timeline arg optional."""
         if not matchid:
             raise Exception("getMatch needs a valid MatchID")
         method = 'IDOTA2Match_570/GetMatchDetails/v001/?match_id={0}'.format(matchid)
-        data = self.doApiRequest(method)
+        data = self.doApiRequest(method)['result']
         return data
