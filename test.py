@@ -1,9 +1,10 @@
-from dotasnif import DotaSniffer
+from smitesnif import SmiteSniffer
 from pprint import pprint
 
 def main():
-  x = DotaSniffer('')
-  pprint(x.getHeroes())
+  x = SmiteSniffer('', '')
+  #pprint(x.createSession())
+  pprint(x.testSession())
   
 
 if __name__ == '__main__':
