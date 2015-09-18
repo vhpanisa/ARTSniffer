@@ -15,14 +15,30 @@ class SmiteSniffer:
             raise Exception("DevID/AuthKey is missing")
         self.__devid = devId
         self.__authkey = authKey
+        self.__sessions = []
         
-    def doApiRequest(self, method=None, respFormat='json', query=None):
+    def doApiRequest(self, method=None, , query=None):
         """Sends an direct request for Smite's API."""
         if not method:
             raise Exception("doApiRequest needs an method")
         
+        if not respFormat in query:
+            respFormat='json'
+        else:
+            respFormat=query[respFormat]
+
         url = 'http://api.smitegame.com/smiteapi.svc/'
         url += method + respFormat
+        if method != 'ping':
+            timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+            url += '/' + self.__devid
+            url += '/' + self.makeSignature(method, timestamp)
+            if method != 'createsession':
+                if len(self.__sessions) == 0:
+                    while not self.__createsession(): pass
+                url += '/' + self.__sessions[0]
+            url += '/' + timestamp
+        {developerId}/{signature}/{session}/{timestamp}/
         if query:
             for key in query:
                 url += ''.join(['/', str(key)])
@@ -45,13 +61,15 @@ class SmiteSniffer:
                 
         return data
 
-    def getHeroes(self):
+    def getGods(self):
         """
-        Returns a dict using the format dict[HeroID] -> HeroName.
+        Returns a dict using the format dict[GodID] -> GodName.
         """
-        method = 'IEconDOTA2_570/GetHeroes/v0001/'
+        method = 'getgods'
         data = self.doApiRequest(method)
-        heroes = {}
+        gods = {}
+        print(data)
+        sys.exit(0)
         for hero in data['result']['heroes']:
             heroes[hero['id']] = hero['name']
         return heroes
@@ -85,28 +103,33 @@ class SmiteSniffer:
         data = self.doApiRequest(method)['result']
         return data
     
-    def pingServer(self):
-        return self.doApiRequest('ping')
-        
-    def createSession(self):
-        method = 'createsession'
-        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        signature = self.makeSignature(method, timestamp)
-        data = self.doApiRequest(method, query=[self.__devid, signature, timestamp])
-        if data['ret_msg'] == 'Approved':
-            self.__sessions.append()
+    def __pingServer(self):
+        if 'successful' in self.doApiRequest('ping')):
             return True
         else:
             return False
         
-    def testSession(self):
+    def __createSession(self):
+        method = 'createsession'
+        data = self.doApiRequest(method)
+        if data['ret_msg'] == 'Approved':
+            self.__sessions.append()
+            return True
+        else:
+            print('Data dump debug: ', data)
+            return False
+        
+    def __testSession(self, session=None):
+        if not session:
+            raise Exception("getMatch needs a valid MatchID")
         method = 'testsession'
-        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        signature = self.makeSignature(method, timestamp)
-        data = self.doApiRequest(method, query=[self.__devid, signature, 'CD0FF850DB93496EBDA77609D4C55989' ,timestamp])
-        return data
+        data = self.doApiRequest(method)
+        if data.statswith('Invalid'):
+            return False
+        else:
+            return True
 
-    def makeSignature(self, method, timestamp):
+    def __makeSignature(self, method, timestamp):
         md5 = hashlib.md5()
         md5.update(self.__devid.encode('utf-8'))
         md5.update(method.encode('utf-8'))
