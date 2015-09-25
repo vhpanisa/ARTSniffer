@@ -6,12 +6,13 @@ class _Sniffer():
     def __init__(self):
         pass
     
-    def build_url(self, base=None, method=None, sufix=None, key=None):
-        if not (method and base and sufix and key):
+    def build_url(self, base=None, method=None, query=None, sufix=None, key=None):
+        if not ((base or method) and sufix and key):
+            print(base, method, sufix, key)
             raise Exception("build_url is missing args")
         
         # Dota2 and LoL
-        url += method
+        url = base if base else "" + method if method else ""
         url += ('&' if '?' in url else '?') + (sufix+'={0}').format(key)
         if query:
             for key in query:
@@ -35,7 +36,7 @@ class DotaSniffer(_Sniffer):
         """
         Sends an direct request for DOTA2's API.
         """   
-        url = super(DotaSniffer, self).build_url('https://api.steampowered.com/', method, query, 'key') 
+        url = super(DotaSniffer, self).build_url('https://api.steampowered.com/', method, query, 'key', self.__apikey) 
         tries = 0
         while True:
             tries += 1
@@ -83,24 +84,30 @@ class DotaSniffer(_Sniffer):
         return self.make_request('IDOTA2Match_570/GetMatchDetails/v001/?match_id={0}'.format(matchid))
 
 
-class LeagueSniffer:
+class LeagueSniffer(_Sniffer):
     """ League of Legends Sniffer Class """
     def __init__(self, apikey=None):
         """
         Creates a Sniffer to pull data from Riot's API for League of Legends.
         """
-        if not keypath:
+        if not apikey:
             raise Exception("No API key was parsed")
         self.__apikey = apikey
 
     
     def make_request(self, method=None, query=None):
         """Sends an direct request for Riot's API."""
-        url = super(DotaSniffer, self).build_url('https://api.steampowered.com/', method, query, 'api_key')
+        url = super(LeagueSniffer, self).build_url(
+            method = method,
+            query = query,
+            sufix = 'api_key',
+            key = self.__apikey
+            )
         while True:
             r = requests.get(url)
             if r.text.startswith('<html>'):
-                print('Got a non-json response. Possible timeout or invalid request.')
+                print('Got a non-json response. Possible timeout or invalid request')
+                print('Tracing URL:', url)
                 continue
             data = json.loads(r.text)
             if 'status' in data:
@@ -110,7 +117,7 @@ class LeagueSniffer:
                     print('Watch out, you can be blacklisted by Riot for exceding the limit all the time.')
                     sleep(1)
                 else:
-                    raise Exception(aux['message'])
+                    raise Exception(aux)
             else:
                 break
                 
@@ -151,44 +158,29 @@ class LeagueSniffer:
             items[item['id']] = item['name']
         return items
 
-    def get_challenger_players_id(self, region=None):
+    def get_challenger_league(self, region=None):
         """
         Returns the summonerID of all players on challenger league of certain region.
         """
         if not region:
-            raise Exception("getChallengerPlayersID needs an region to be specified")
-        url = 'https://{0}.api.pvp.net/api/lol/{0}/v2.5/league/challenger?type=RANKED_SOLO_5x5'.format(region)
-        data = self.doApiRequest(url)
-        pids = []
-        for player in data['entries']:
-            pids.append(player['playerOrTeamId'])
-        return pids
+            raise Exception("An region needs to be specified")
+        return self.make_request('https://{0}.api.pvp.net/api/lol/{0}/v2.5/league/challenger?type=RANKED_SOLO_5x5'.format(region))
 
-    def get_master_players_id(self, region=None):
+    def get_master_league(self, region=None):
         """
         Returns the summonerID of all players on master league of certain region.
         """
         if not region:
             raise Exception("getMasterPlayersID needs an region to be specified")
-        url = 'https://{0}.api.pvp.net/api/lol/{0}/v2.5/league/master?type=RANKED_SOLO_5x5'.format(region)
-        data = self.doApiRequest(url)
-        pids = []
-        for player in data['entries']:
-            pids.append(player['playerOrTeamId'])
-        return pids
+        return self.make_request('https://{0}.api.pvp.net/api/lol/{0}/v2.5/league/master?type=RANKED_SOLO_5x5'.format(region))
 
     def get_match_list(self, region=None, pid=None, query=None):
         """
         Returns an list of MatchIDs for a given player on a region.
         """
-        if not region or pid:
+        if not (region and pid):
             raise Exception("getMatchList needs a valid Region and SummonerID")
-        url = 'https://{0}.api.pvp.net/api/lol/{0}/v2.2/matchlist/by-summoner/{1}'.format(region, pid)
-        data = self.doApiRequest(url, query)['matches']
-        matches = []
-        for match in data:
-            matches.append(match['matchId'])
-        return matches
+        return self.make_request('https://{0}.api.pvp.net/api/lol/{0}/v2.2/matchlist/by-summoner/{1}'.format(region, pid), query)
 
     def get_match(self, region=None, matchid=None, timeline=False):
         """
