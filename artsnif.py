@@ -36,11 +36,11 @@ class DotaSniffer(_Sniffer):
         """
         Sends an direct request for DOTA2's API.
         """   
-        url = super(DotaSniffer, self).build_url('https://api.steampowered.com/', method, query, 'key', self.__apikey) 
+        url = super().build_url('https://api.steampowered.com/', method, query, 'key', self.__apikey) 
         tries = 0
         while True:
             tries += 1
-            if tries >= self.__tries:
+            if tries > self.__tries:
                 return None
             r = requests.get(url)
             if r.text.startswith('<html>'): # Got a non-json response. Possible timeout or invalid request.
@@ -86,35 +86,34 @@ class DotaSniffer(_Sniffer):
 
 class LeagueSniffer(_Sniffer):
     """ League of Legends Sniffer Class """
-    def __init__(self, apikey=None):
+    def __init__(self, apikey=None, tries=3):
         """
         Creates a Sniffer to pull data from Riot's API for League of Legends.
         """
         if not apikey:
             raise Exception("No API key was parsed")
         self.__apikey = apikey
+        self.__tries = tries
 
     
     def make_request(self, method=None, query=None):
         """Sends an direct request for Riot's API."""
-        url = super(LeagueSniffer, self).build_url(
-            method = method,
-            query = query,
-            sufix = 'api_key',
-            key = self.__apikey
-            )
+        url = super().build_url(method = method, query = query, sufix = 'api_key', key = self.__apikey)
+        tries = 0
         while True:
+            tries += 1
+            if tries > self.__tries:
+                return None
             r = requests.get(url)
             if r.text.startswith('<html>'):
-                print('Got a non-json response. Possible timeout or invalid request')
-                print('Tracing URL:', url)
+                #Got a non-json response. Possible timeout or invalid request
                 continue
             data = json.loads(r.text)
             if 'status' in data:
                 aux = data['status']
                 if aux['status_code'] == 429:
-                    print('Reached the limit of requests, sleeping for one second.')
-                    print('Watch out, you can be blacklisted by Riot for exceding the limit all the time.')
+                    #Reached the limit of requests, sleeping for one second
+                    #Watch out, you can be blacklisted by Riot for exceding the limit all the time.
                     sleep(1)
                 else:
                     raise Exception(aux)
