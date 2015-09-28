@@ -16,7 +16,7 @@ class _Sniffer():
         url += ('&' if '?' in url else '?') + (sufix+'={0}').format(key)
         if query:
             for key in query:
-                url += ''.join(['&', key, '=', query[key]])
+                url += ''.join(['&', key, '=', str(query[key])])
                 
         return url
         
@@ -139,12 +139,7 @@ class LeagueSniffer(_Sniffer):
         """
         Returns a dict using the format dict[ChampionID] -> ChampionName.
         """
-        url = 'https://global.api.pvp.net/api/lol/static-data/na/v1.2/champion?champData=all'
-        data = self.doApiRequest(url)
-        champs = {}
-        for row in data['keys']:
-            champs[row] = data['keys'][row]
-        return champs
+        return self.make_request('https://global.api.pvp.net/api/lol/static-data/na/v1.2/champion?champData=all')
 
     def get_items(self):
         """
@@ -182,18 +177,13 @@ class LeagueSniffer(_Sniffer):
             raise Exception("getMatchList needs a valid Region and SummonerID")
         return self.make_request('https://{0}.api.pvp.net/api/lol/{0}/v2.2/matchlist/by-summoner/{1}'.format(region, pid), query)
 
-    def get_match(self, region=None, matchid=None, timeline=False):
+    def get_match(self, region=None, matchid=None, query=None):
         """
         Returns full mathch info, timeline arg optional.
         """
-        if not region or matchid:
+        if not (region and matchid):
             raise Exception("getMatch needs a valid Region and MatchID")
-        url = 'https://{0}.api.pvp.net/api/lol/{0}/v2.2/match/{1}'.format(region, matchid)
-        if timeline:
-            url += '?includeTimeline=True'
-        data = self.doApiRequest(url)
-        #Not finished
-        return data
+        return self.make_request('https://{0}.api.pvp.net/api/lol/{0}/v2.2/match/{1}'.format(region, matchid))
 
 
 class SmiteSniffer:
